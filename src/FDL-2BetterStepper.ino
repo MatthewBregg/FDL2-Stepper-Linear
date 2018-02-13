@@ -105,7 +105,9 @@ void setup() {
 // Spark firmware interleaves background CPU activity associated with WiFi +
 // Cloud activity with your code.
 // Make sure none of your code delays or blocks for too long (like more than 5
-// seconds), or weird things can happen.
+// seconds), or weird things can happen
+
+
 void loop() {
 
   if (triggerDown()) {
@@ -288,8 +290,14 @@ void fire() {
 }
 // Ending inserted stepper functions here.
 
+// fireCancelWindow : Abort if the trigger is held down for less than this.
+// Avoid blips on the button caused by randomness from firing,
+// but be small enough so that any reasonable human press causes at least one dart to fire.
+// Note if this is more than the spinup delay, will be ignored past the spinup delay.
+const unsigned long fireCancelWindow = 15;
 void fireBrushlessLoop() {
 
+  unsigned long timeFiringStarted = millis();
   unsigned long spinupEnd = millis() + getSpinup();
 
   // kick on flywheels
@@ -321,7 +329,13 @@ void fireBrushlessLoop() {
       spinupEnd = millis() + stepperWarmup;
     }
 
-    while (millis() < spinupEnd) {
+    unsigned long currentTime = millis();
+    while (currentTime < spinupEnd) {
+      currentTime = millis();
+      if ( currentTime < (timeFiringStarted + fireCancelWindow) && (!triggerDown())) {
+        // Abort the firing unless the trigger is held down again!
+        fireLoopNotYetRan = false;
+      }
       delay(1);
     }
 
