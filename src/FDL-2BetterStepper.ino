@@ -251,7 +251,6 @@ bool reverseBoltToSwitch(){
 
 void fire(){
  //loop called to fire a shot
-
  //set distance to run bolt forward
  stepsToGo = 720;
  //if continuing a previous instance add 80 steps
@@ -299,9 +298,15 @@ void fireBrushlessLoop(){
     ////kick on steppers, wait for warmup
     digitalWrite(stepperEnable, LOW);
 
-    //still holding the trigger?
-    if(triggerDown()){
+    bool fireLoopNotYetRan = true;
+     // Use this, and check this, to ensure we fire at least once. Without
+     // The behavior is that quickly tapping the trigger only revs, not fires,
+     // as the below loop won't run!
+     // I'm not a huge fan of this behavior,
+     // makes it harder to fire single shots reliably
 
+    //still holding the trigger?
+    if(triggerDown() || fireLoopNotYetRan){
         //wait for spinup
         //if last trigger up less than a second ago, minimize delay
         if(lastTriggerUp != 0 && millis() - lastTriggerUp < 1000){
@@ -320,9 +325,14 @@ void fireBrushlessLoop(){
 
         flywheelESC.write(readESCPower());
 
-        while(triggerDown()){
+        while(triggerDown() || fireLoopNotYetRan){
 
             fire();
+            fireLoopNotYetRan = false;
+            // Alright, we've fired once, now return fully to if
+            // the trigger is held down.
+
+
             burstCount--;
 
             if(triggerDown() && burstCount > 0){
