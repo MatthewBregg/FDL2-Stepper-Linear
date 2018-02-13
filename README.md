@@ -1,3 +1,6 @@
+# NOTE
+Original code from https://github.com/projectfdl/FDL-2-Blaster/tree/master/FDL-2%20Stepper
+
 # FDL-2BetterStepper
 
 A Particle project named FDL-2BetterStepper
