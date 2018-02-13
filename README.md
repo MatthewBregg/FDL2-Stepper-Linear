@@ -1,6 +1,10 @@
 # NOTE
 Original code from https://github.com/projectfdl/FDL-2-Blaster/tree/master/FDL-2%20Stepper and from http://torukmakto4.blogspot.com/2018/01/google-drive-link-for-hy-con-part-files.html
 
+# Video of it in action
+
+[Video](https://www.youtube.com/watch?v=QIGK52VVsFE&feature=youtu.be)
+
 # FDL-2BetterStepper
 
 A Particle project named FDL-2BetterStepper
