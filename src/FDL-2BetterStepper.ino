@@ -23,7 +23,6 @@ SYSTEM_MODE(AUTOMATIC);
 
 
  int stepsToGo;
- // bool firstRun = 1;
  bool boltHomed = 0;
  double currSpeed = startSpeed; //to be used by fire() to be aware of motor speed from last run and mate speed ramp to that
  double stepdelay; //us
