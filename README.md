@@ -1,5 +1,5 @@
 # NOTE
-Original code from https://github.com/projectfdl/FDL-2-Blaster/tree/master/FDL-2%20Stepper
+Original code from https://github.com/projectfdl/FDL-2-Blaster/tree/master/FDL-2%20Stepper and from http://torukmakto4.blogspot.com/2018/01/google-drive-link-for-hy-con-part-files.html
 
 # FDL-2BetterStepper
 
