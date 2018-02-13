@@ -9,15 +9,6 @@
 SYSTEM_MODE(AUTOMATIC);
 
 // Constants from /u/torukmakto4's code
-// FEED DELAY PARAMETERS - increase feedDelayBase if you have low first shot
-// velocity. Decrease for quicker lock time (HvZ players take note)
-// Increase recentShotCompensation for shorter lock time on followup shots
-// within 1s - decrease for more consistent lock time.
-// DEFAULTS are feedDelayBase=140 and recentShotCompensation=60 for 9.5mm Gen3
-// wheels, on 3S
-int feedDelayBase = 140; // ms
-int recentShotCompensation =
-    60; // ms - delay reduction when recent torque command to flywheel motors
 
 // BOLT DRIVE PARAMETERS - don't mess with these unless you know what you are
 // doing
@@ -252,6 +243,12 @@ bool reverseBoltToSwitch() {
   return pinReadFast(pusherSenseIn);
 }
 
+void stopFiring() {
+  if (!decelerateBoltToSwitch()) {
+    reverseBoltToSwitch();
+  }
+}
+
 void fire() {
   // loop called to fire a shot
   // set distance to run bolt forward
@@ -346,9 +343,7 @@ void fireBrushlessLoop() {
         flywheelESC.write(readESCPower());
       } else {
         brushlessPowerDown(1000);
-        if (!decelerateBoltToSwitch()) {
-          reverseBoltToSwitch();
-        }
+        stopFiring();
         while (triggerDown()) {
           delay(1);
         }
@@ -357,9 +352,7 @@ void fireBrushlessLoop() {
       }
     }
     brushlessPowerDown(1000);
-    if (!decelerateBoltToSwitch()) {
-      reverseBoltToSwitch();
-    }
+    stopFiring();
   } else {
     brushlessPowerDown(1000);
     return;
