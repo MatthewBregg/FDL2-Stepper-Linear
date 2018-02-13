@@ -294,7 +294,7 @@ void fire() {
 // Avoid blips on the button caused by randomness from firing,
 // but be small enough so that any reasonable human press causes at least one dart to fire.
 // Note if this is more than the spinup delay, will be ignored past the spinup delay.
-const unsigned long fireCancelWindow = 15;
+const unsigned long fireCancelWindow = 18;
 void fireBrushlessLoop() {
 
   unsigned long timeFiringStarted = millis();
