@@ -144,7 +144,7 @@ void loop() {
 }
 
 boolean triggerDown(){
-    return analogRead(speedSenseIn) > 20;
+    return analogRead(speedSenseIn) > 2000;
 }
 
 int readESCPower(){
