@@ -305,6 +305,12 @@ void fireBrushlessLoop(){
         //wait for spinup
         //if last trigger up less than a second ago, minimize delay
         if(lastTriggerUp != 0 && millis() - lastTriggerUp < 1000){
+          // This is confusing, but if I get this right
+          // If the wheels are already spinning, instead of the long wheel spin
+          // up time, then just cut the time down to that of stepperWarmup.
+          // But note, the stepper is already warmed up!
+          // So stepperWarmup is just an abitary period to wait for the wheels
+          // to spin back up, as far as I can tell.
             spinupEnd = millis() + stepperWarmup;
         }
 
