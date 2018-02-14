@@ -289,16 +289,17 @@ void fire() {
 }
 // Ending inserted stepper functions here.
 
-// fireCancelWindow : Abort if the trigger is held down for less than this.
-// Avoid blips on the button caused by randomness from firing,
-// but be small enough so that any reasonable human press causes at least one
-// dart to fire. Note if this is more than the spinup delay, will be ignored
-// past the spinup delay.
-const unsigned long fireCancelWindow = 18;
-void fireBrushlessLoop() {
 
-  unsigned long timeFiringStarted = millis();
+void fireBrushlessLoop() {
+  // fireCancelWindow : Abort if the trigger is held down for less than this.
+  // Avoid blips on the button caused by randomness from firing,
+  // but be small enough so that any reasonable human press causes at least one
+  // dart to fire. Note if this is more than the spinup delay, will be ignored
+  // past the spinup delay.
+  const unsigned long fireCancelWindow = 18;
+  const unsigned long timeFiringStarted = millis();
   unsigned long spinupEnd = millis() + getSpinup();
+
 
   // kick on flywheels
   int kickonSpeed = readESCPower();
@@ -331,11 +332,9 @@ void fireBrushlessLoop() {
     }
     delay(1);
   }
-
   int burstCount = getBurstCount();
 
   flywheelESC.write(readESCPower());
-
   // Use a do while loop to ensure we fire  at least once. Otherwise,
   // the behavior is that quickly tapping the trigger only revs, not fires,
   // as the below loop won't run!
@@ -344,25 +343,25 @@ void fireBrushlessLoop() {
   do {
     fire();
     burstCount--;
-
-    if (triggerDown() && burstCount > 0) {
-
-      flywheelESC.write(readESCPower());
-    } else {
-      // Perform a shut down and stop firing.
-      brushlessPowerDown(1000);
-      stopFiring();
-      while (triggerDown()) {
-        delay(1);
-      }
-
-      return;
-    }
-  } while (triggerDown());
-
-  // Perform a shutdown, and stop firing.
-  brushlessPowerDown(1000);
+    // Continue to update the flywheel speed while firing?
+    // Why?
+    flywheelESC.write(readESCPower());
+    // Repeat this do loop until all shots are fired.
+  } while (triggerDown() && burstCount > 0);
+  // Done with this burst, return the pusher.
   stopFiring();
+  // If the trigger is still held down, then wait until released before
+  // returning control to the main loop.
+  // If we do not wait, then the main loop will see trigger down, and fire
+  // again.
+  // Note how we stop the flywheels after this loop
+  // This way an user can keep the FDL revved.
+  while (triggerDown()) {
+    delay(1);
+  }
+
+  // Now we stop the flywheels
+  brushlessPowerDown(1000);
 }
 
 void brushlessPowerDown(double millisToDisable) {
