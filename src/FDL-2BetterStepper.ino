@@ -121,6 +121,8 @@ void loop() {
       flywheelESC.writeMicroseconds(1000);
       delay(1500);
     } else {
+      ////kick on steppers, warmup in included in spinup time.
+      digitalWrite(stepperEnable, LOW);
       fireBrushlessLoop();
     }
   } else {
@@ -344,34 +346,43 @@ private:
   }
 };
 
-void fireBrushlessLoop() {
-  ////kick on steppers, warmup in included in spinup time.
-  digitalWrite(stepperEnable, LOW);
-  RevBrushlessMotors revUpBrushlessMotors;
-  if (revUpBrushlessMotors.isCancelled()) {
-    return;
-  }
-  int burstCount = getBurstCount();
+// Revoles the stepper an up to burstCount times,
+// as long as the trigger is held down.
+// updating the flywheel speed while doing so.
+void stepperRevolveUpToBurstAmount(int burstCount, RevBrushlessMotors* revUpBrushlessMotors) {
   // Use a do while loop to ensure we fire  at least once.
   do {
     fire();
     burstCount--;
     // Continue to update the flywheel speed while firing?
     // Why?
-    revUpBrushlessMotors.updateSpeedFromSettings();
+    revUpBrushlessMotors->updateSpeedFromSettings();
     // Repeat this do loop until all shots are fired.
   } while (triggerDown() && burstCount > 0);
   // Done with this burst, return the pusher.
   stopFiring();
+}
+
+void delayUntilTriggerRelease() {
+  while (triggerDown()) {
+    delay(1);
+  }
+}
+
+void fireBrushlessLoop() {
+  RevBrushlessMotors revUpBrushlessMotors;
+  if (revUpBrushlessMotors.isCancelled()) {
+    return;
+  }
+  int burstCount = getBurstCount();
+  stepperRevolveUpToBurstAmount(burstCount, &revUpBrushlessMotors);
   // If the trigger is still held down, then wait until released before
   // returning control to the main loop.
   // If we do not wait, then the main loop will see trigger down, and fire
   // again.
   // Note how we stop the flywheels after this loop
   // This way an user can keep the FDL revved.
-  while (triggerDown()) {
-    delay(1);
-  }
+  delayUntilTriggerRelease();
 }
 
 String getSettingsFromEEPROM() {
