@@ -289,7 +289,6 @@ void fire() {
 }
 // Ending inserted stepper functions here.
 
-
 // On construction, this class revs the flywheel
 // Upon exiting scope, this class turns off the flywheels.
 // If the trigger is released within a small time frame, consider it a
@@ -299,9 +298,7 @@ class RevBrushlessMotors {
 public:
   void updateSpeedFromSettings() { flywheelESC.write(readESCPower()); }
   RevBrushlessMotors() { revUpBrushlessMotors(); }
-  bool isCancelled() {
-    return cancelled;
-  }
+  bool isCancelled() { return cancelled; }
   ~RevBrushlessMotors() { brushlessPowerDown(1000); }
 
 private:
@@ -327,7 +324,6 @@ private:
     // wait for spinup
     // if last trigger up less than a second ago, minimize delay
     if (lastTriggerUp != 0 && millis() - lastTriggerUp < 1000) {
-      // This is confusing, but if I get this right
       // If the wheels are already spinning, instead of the long wheel spin
       // up time, then just cut the time down to that of stepperWarmup.
       // But note, the stepper is already warmed up!
@@ -340,7 +336,7 @@ private:
       currentTime = millis();
       if (currentTime < (timeFiringStarted + fireCancelWindow) &&
           (!triggerDown())) {
-            cancelled = true;
+        cancelled = true;
       }
       delay(1);
     }
@@ -352,15 +348,11 @@ void fireBrushlessLoop() {
   ////kick on steppers, warmup in included in spinup time.
   digitalWrite(stepperEnable, LOW);
   RevBrushlessMotors revUpBrushlessMotors;
-  if ( revUpBrushlessMotors.isCancelled() ) {
+  if (revUpBrushlessMotors.isCancelled()) {
     return;
   }
   int burstCount = getBurstCount();
-  // Use a do while loop to ensure we fire  at least once. Otherwise,
-  // the behavior is that quickly tapping the trigger only revs, not fires,
-  // as the below loop won't run!
-  // I'm not a huge fan of this behavior,
-  // makes it harder to fire single shots reliably
+  // Use a do while loop to ensure we fire  at least once.
   do {
     fire();
     burstCount--;
