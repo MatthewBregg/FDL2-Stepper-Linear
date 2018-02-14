@@ -349,7 +349,8 @@ private:
 // Revoles the stepper an up to burstCount times,
 // as long as the trigger is held down.
 // updating the flywheel speed while doing so.
-void stepperRevolveUpToBurstAmount(int burstCount, RevBrushlessMotors* revUpBrushlessMotors) {
+void stepperRevolveUpToBurstAmount(int burstCount,
+                                   RevBrushlessMotors *revUpBrushlessMotors) {
   // Use a do while loop to ensure we fire  at least once.
   do {
     fire();
