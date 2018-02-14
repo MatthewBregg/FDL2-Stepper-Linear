@@ -290,51 +290,72 @@ void fire() {
 // Ending inserted stepper functions here.
 
 
-void fireBrushlessLoop() {
-  // fireCancelWindow : Abort if the trigger is held down for less than this.
-  // Avoid blips on the button caused by randomness from firing,
-  // but be small enough so that any reasonable human press causes at least one
-  // dart to fire. Note if this is more than the spinup delay, will be ignored
-  // past the spinup delay.
-  const unsigned long fireCancelWindow = 18;
-  const unsigned long timeFiringStarted = millis();
-  unsigned long spinupEnd = millis() + getSpinup();
+// On construction, this class revs the flywheel
+// Upon exiting scope, this class turns off the flywheels.
+// If the trigger is released within a small time frame, consider it a
+// em noise blip and abort.
+class RevBrushlessMotors {
 
-
-  // kick on flywheels
-  int kickonSpeed = readESCPower();
-
-  flywheelESC.write(kickonSpeed);
-
-  ////kick on steppers, wait for warmup
-  digitalWrite(stepperEnable, LOW);
-
-  // wait for spinup
-  // if last trigger up less than a second ago, minimize delay
-  if (lastTriggerUp != 0 && millis() - lastTriggerUp < 1000) {
-    // This is confusing, but if I get this right
-    // If the wheels are already spinning, instead of the long wheel spin
-    // up time, then just cut the time down to that of stepperWarmup.
-    // But note, the stepper is already warmed up!
-    // So stepperWarmup is just an abitary period to wait for the wheels
-    // to spin back up, as far as I can tell.
-    spinupEnd = millis() + stepperWarmup;
+public:
+  void updateSpeedFromSettings() { flywheelESC.write(readESCPower()); }
+  RevBrushlessMotors() { revUpBrushlessMotors(); }
+  bool isCancelled() {
+    return cancelled;
   }
+  ~RevBrushlessMotors() { brushlessPowerDown(1000); }
 
-  unsigned long currentTime = millis();
-  while (currentTime < spinupEnd) {
-    currentTime = millis();
-    if (currentTime < (timeFiringStarted + fireCancelWindow) &&
-        (!triggerDown())) {
-      // Abort the firing unless the trigger is held down again!
-      brushlessPowerDown(1000);
-      return;
+private:
+  void brushlessPowerDown(double millisToDisable) {
+    flywheelESC.writeMicroseconds(1000);
+    // sets disable time for 1 sec
+    disableMillis = millis() + millisToDisable;
+    lastTriggerUp = millis();
+  }
+  const unsigned long fireCancelWindow = 18;
+  bool cancelled = false;
+  void revUpBrushlessMotors() {
+    // fireCancelWindow : Abort if the trigger is held down for less than this.
+    // Avoid blips on the button caused by randomness from firing,
+    // but be small enough so that any reasonable human press causes at least
+    // one dart to fire. Note if this is more than the spinup delay, will be
+    // ignored past the spinup delay.
+    const unsigned long timeFiringStarted = millis();
+    unsigned long spinupEnd = millis() + getSpinup();
+    // kick on flywheels
+    int kickonSpeed = readESCPower();
+    flywheelESC.write(kickonSpeed);
+    // wait for spinup
+    // if last trigger up less than a second ago, minimize delay
+    if (lastTriggerUp != 0 && millis() - lastTriggerUp < 1000) {
+      // This is confusing, but if I get this right
+      // If the wheels are already spinning, instead of the long wheel spin
+      // up time, then just cut the time down to that of stepperWarmup.
+      // But note, the stepper is already warmed up!
+      // So stepperWarmup is just an abitary period to wait for the wheels
+      // to spin back up, as far as I can tell.
+      spinupEnd = millis() + stepperWarmup;
     }
-    delay(1);
+    unsigned long currentTime = millis();
+    while (currentTime < spinupEnd) {
+      currentTime = millis();
+      if (currentTime < (timeFiringStarted + fireCancelWindow) &&
+          (!triggerDown())) {
+            cancelled = true;
+      }
+      delay(1);
+    }
+    flywheelESC.write(readESCPower());
+  }
+};
+
+void fireBrushlessLoop() {
+  ////kick on steppers, warmup in included in spinup time.
+  digitalWrite(stepperEnable, LOW);
+  RevBrushlessMotors revUpBrushlessMotors;
+  if ( revUpBrushlessMotors.isCancelled() ) {
+    return;
   }
   int burstCount = getBurstCount();
-
-  flywheelESC.write(readESCPower());
   // Use a do while loop to ensure we fire  at least once. Otherwise,
   // the behavior is that quickly tapping the trigger only revs, not fires,
   // as the below loop won't run!
@@ -345,7 +366,7 @@ void fireBrushlessLoop() {
     burstCount--;
     // Continue to update the flywheel speed while firing?
     // Why?
-    flywheelESC.write(readESCPower());
+    revUpBrushlessMotors.updateSpeedFromSettings();
     // Repeat this do loop until all shots are fired.
   } while (triggerDown() && burstCount > 0);
   // Done with this burst, return the pusher.
@@ -359,19 +380,6 @@ void fireBrushlessLoop() {
   while (triggerDown()) {
     delay(1);
   }
-
-  // Now we stop the flywheels
-  brushlessPowerDown(1000);
-}
-
-void brushlessPowerDown(double millisToDisable) {
-
-  flywheelESC.writeMicroseconds(1000);
-
-  // sets disable time for 1 sec
-  disableMillis = millis() + millisToDisable;
-
-  lastTriggerUp = millis();
 }
 
 String getSettingsFromEEPROM() {
