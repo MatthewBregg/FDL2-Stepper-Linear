@@ -24,7 +24,7 @@ bool boltHomed = 0;
 double currSpeed = startSpeed; // to be used by fire() to be aware of motor
                                // speed from last run and mate speed ramp to
                                // that
-double stepdelay; // us
+double stepdelay;              // us
 
 // Former FDL code begins here!
 // Define the pins we're going to call pinMode on
@@ -106,7 +106,6 @@ void setup() {
 // Cloud activity with your code.
 // Make sure none of your code delays or blocks for too long (like more than 5
 // seconds), or weird things can happen
-
 
 void loop() {
 
@@ -292,8 +291,9 @@ void fire() {
 
 // fireCancelWindow : Abort if the trigger is held down for less than this.
 // Avoid blips on the button caused by randomness from firing,
-// but be small enough so that any reasonable human press causes at least one dart to fire.
-// Note if this is more than the spinup delay, will be ignored past the spinup delay.
+// but be small enough so that any reasonable human press causes at least one
+// dart to fire. Note if this is more than the spinup delay, will be ignored
+// past the spinup delay.
 const unsigned long fireCancelWindow = 18;
 void fireBrushlessLoop() {
 
@@ -308,69 +308,61 @@ void fireBrushlessLoop() {
   ////kick on steppers, wait for warmup
   digitalWrite(stepperEnable, LOW);
 
-  bool fireLoopNotYetRan = true;
-  // Use this, and check this, to ensure we fire at least once. Without
-  // The behavior is that quickly tapping the trigger only revs, not fires,
+  // wait for spinup
+  // if last trigger up less than a second ago, minimize delay
+  if (lastTriggerUp != 0 && millis() - lastTriggerUp < 1000) {
+    // This is confusing, but if I get this right
+    // If the wheels are already spinning, instead of the long wheel spin
+    // up time, then just cut the time down to that of stepperWarmup.
+    // But note, the stepper is already warmed up!
+    // So stepperWarmup is just an abitary period to wait for the wheels
+    // to spin back up, as far as I can tell.
+    spinupEnd = millis() + stepperWarmup;
+  }
+
+  unsigned long currentTime = millis();
+  while (currentTime < spinupEnd) {
+    currentTime = millis();
+    if (currentTime < (timeFiringStarted + fireCancelWindow) &&
+        (!triggerDown())) {
+      // Abort the firing unless the trigger is held down again!
+      brushlessPowerDown(1000);
+      return;
+    }
+    delay(1);
+  }
+
+  int burstCount = getBurstCount();
+
+  flywheelESC.write(readESCPower());
+
+  // Use a do while loop to ensure we fire  at least once. Otherwise,
+  // the behavior is that quickly tapping the trigger only revs, not fires,
   // as the below loop won't run!
   // I'm not a huge fan of this behavior,
   // makes it harder to fire single shots reliably
+  do {
+    fire();
+    burstCount--;
 
-  // still holding the trigger?
-  if (triggerDown() || fireLoopNotYetRan) {
-    // wait for spinup
-    // if last trigger up less than a second ago, minimize delay
-    if (lastTriggerUp != 0 && millis() - lastTriggerUp < 1000) {
-      // This is confusing, but if I get this right
-      // If the wheels are already spinning, instead of the long wheel spin
-      // up time, then just cut the time down to that of stepperWarmup.
-      // But note, the stepper is already warmed up!
-      // So stepperWarmup is just an abitary period to wait for the wheels
-      // to spin back up, as far as I can tell.
-      spinupEnd = millis() + stepperWarmup;
-    }
+    if (triggerDown() && burstCount > 0) {
 
-    unsigned long currentTime = millis();
-    while (currentTime < spinupEnd) {
-      currentTime = millis();
-      if ( currentTime < (timeFiringStarted + fireCancelWindow) && (!triggerDown())) {
-        // Abort the firing unless the trigger is held down again!
-        fireLoopNotYetRan = false;
+      flywheelESC.write(readESCPower());
+    } else {
+      // Perform a shut down and stop firing.
+      brushlessPowerDown(1000);
+      stopFiring();
+      while (triggerDown()) {
+        delay(1);
       }
-      delay(1);
+
+      return;
     }
+  } while (triggerDown());
 
-    int burstCount = getBurstCount();
-
-    flywheelESC.write(readESCPower());
-
-    while (triggerDown() || fireLoopNotYetRan) {
-
-      fire();
-      fireLoopNotYetRan = false;
-      // Alright, we've fired once, now return fully to if
-      // the trigger is held down.
-
-      burstCount--;
-
-      if (triggerDown() && burstCount > 0) {
-
-        flywheelESC.write(readESCPower());
-      } else {
-        brushlessPowerDown(1000);
-        stopFiring();
-        while (triggerDown()) {
-          delay(1);
-        }
-
-        return;
-      }
-    }
-    brushlessPowerDown(1000);
-    stopFiring();
-  } else {
-    brushlessPowerDown(1000);
-    return;
-  }
+  // Perform a shutdown, and stop firing.
+  brushlessPowerDown(1000);
+  stopFiring();
 }
 
 void brushlessPowerDown(double millisToDisable) {
